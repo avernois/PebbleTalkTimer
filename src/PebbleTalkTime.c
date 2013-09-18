@@ -1,7 +1,6 @@
 #include "pebble_os.h"
 #include "pebble_app.h"
 #include "pebble_fonts.h"
-
 #include "constants.h"
 
 #define MY_UUID { 0xD3, 0x8B, 0x2F, 0x08, 0x04, 0xAB, 0x4A, 0x68, 0xB2, 0xF7, 0x1E, 0xB4, 0xD2, 0x64, 0x4C, 0xFE }
@@ -16,21 +15,23 @@ TextLayer _countDownLayer;
 NumberWindow _durationNumberWindow;
 NumberWindow _firstAlertNumberWindow;
 
-int _talkDuration;
 int _firstAlert;
 
 typedef struct {
   int current;
+  int firstAlert;
+  VibePattern vibePattern;
   char currentText[3];
 } CountDown;
 
-CountDown _countDown;
 
-const VibePattern _customPattern = {
-  .durations = (uint32_t []) {500, 200, 500, 200, 500, 200, 500},
-  .num_segments = 7
-};
-
+CountDown _countDown = {.current = DEFAULT_DURATION,
+                        .firstAlert = DEFAULT_FIRST_ALERT,
+                        .vibePattern = {
+                          .durations = (uint32_t []) {500, 200, 500, 200, 500, 200, 500},
+                          .num_segments = 7
+                        },
+                        .currentText = "  "};
 
 void set_coundown(CountDown *countdown, int value) {
   countdown->current = value;
@@ -41,39 +42,11 @@ void decrease_countdown(CountDown *countdown) {
   set_coundown(countdown, countdown->current - 1);
 }
 
-void start_countdown(AppContextRef ctx, int talkDuration) {
-  set_coundown(&_countDown, talkDuration);
+void start_countdown(AppContextRef ctx) {
   app_timer_send_event(ctx, DELAY, 1);
 }
 
-
-void first_alert_selected(struct NumberWindow *numberWindow, void *context){
-  _firstAlert = number_window_get_value(numberWindow);
-  
-  start_countdown(context, _talkDuration);
-  window_stack_push((Window*)&_window, true);
-}
-
-void select_first_alert(void *context) {
-  number_window_init(&_firstAlertNumberWindow, "First alert", (NumberWindowCallbacks){
-    .decremented = NULL,
-    .incremented = NULL,
-    .selected = (NumberWindowCallback) first_alert_selected}, context);
-
-  number_window_set_max(&_firstAlertNumberWindow, _talkDuration);
-  number_window_set_min(&_firstAlertNumberWindow, 0);
-  number_window_set_value(&_firstAlertNumberWindow, DEFAULT_FIRST_ALERT);
-
-  window_stack_push((Window*)&_firstAlertNumberWindow, true);
-}
-
-void duration_selected(struct NumberWindow *number_window, void *context) {
-  _talkDuration = number_window_get_value(number_window);
-  select_first_alert(context);
-}
-
-
-void handle_init(AppContextRef ctx) {
+void init_countdown_window() {
   window_init(&_window, "Window Name");
   window_stack_push(&_window, true /* Animated */);
   window_set_fullscreen(&_window, true);   
@@ -84,33 +57,78 @@ void handle_init(AppContextRef ctx) {
   text_layer_set_background_color(&_countDownLayer, GColorClear);
   text_layer_set_text_alignment(&_countDownLayer, GTextAlignmentCenter);
   text_layer_set_font(&_countDownLayer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
-  layer_add_child(&_window.layer, &_countDownLayer.layer);
 
-  number_window_init(&_durationNumberWindow, "Duration", (NumberWindowCallbacks){
-    .decremented = NULL,
-    .incremented = NULL,
-    .selected = (NumberWindowCallback) duration_selected}, ctx);
+  text_layer_set_text(&_countDownLayer, _countDown.currentText);
+  layer_add_child(&_window.layer, &_countDownLayer.layer);
+}
+
+void handle_first_alert_selected(struct NumberWindow *numberWindow, void *context){
+  _countDown.firstAlert = number_window_get_value(numberWindow);
+  
+  init_countdown_window();
+  start_countdown(context);
+  window_stack_push((Window*)&_window, true);
+}
+
+void select_first_alert(void *context) {
+  number_window_init(&_firstAlertNumberWindow, "First alert", 
+                     (NumberWindowCallbacks){
+                      .decremented = NULL,
+                      .incremented = NULL,
+                      .selected = (NumberWindowCallback) handle_first_alert_selected
+                      }, 
+                      context);
+
+  number_window_set_min(&_firstAlertNumberWindow, 0);
+  number_window_set_value(&_firstAlertNumberWindow, DEFAULT_FIRST_ALERT);
+
+  window_stack_push((Window*)&_firstAlertNumberWindow, true);
+}
+
+void handle_duration_selected(struct NumberWindow *number_window, void *context) {
+  set_coundown(&_countDown, number_window_get_value(number_window));
+  select_first_alert(context);
+}
+
+void select_talk_duration(AppContextRef *context) {
+  number_window_init(&_durationNumberWindow, "Duration",
+                     (NumberWindowCallbacks){
+                      .decremented = NULL,
+                      .incremented = NULL,
+                      .selected = (NumberWindowCallback) handle_duration_selected
+                     },
+                     context);
 
   number_window_set_max(&_durationNumberWindow, MAX_DURATION);
   number_window_set_min(&_durationNumberWindow, MIN_DURATION);
   number_window_set_value(&_durationNumberWindow, DEFAULT_DURATION);
 
   window_stack_push((Window *)&_durationNumberWindow, true);
+}
 
-  text_layer_set_text(&_countDownLayer, _countDown.currentText);
+void manage_alert(CountDown *countDown) {
+  if (countDown->current == countDown->firstAlert) {
+    vibes_enqueue_custom_pattern(countDown->vibePattern);
+  }
+}
+
+void update_countdown(CountDown *countDown) {
+  decrease_countdown(countDown);
+  manage_alert(countDown);
+  text_layer_set_text(&_countDownLayer, countDown->currentText);
 }
 
 void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
   if (_countDown.current > 0) {
-    decrease_countdown(&_countDown);
-    if (_countDown.current == _firstAlert) {
-      vibes_enqueue_custom_pattern(_customPattern);
-    }
-    text_layer_set_text(&_countDownLayer, _countDown.currentText);
+    update_countdown(&_countDown);
     app_timer_send_event(ctx, DELAY, 1);
   } else {
     text_layer_set_text(&_countDownLayer, "Time's up !");
   }
+}
+
+void handle_init(AppContextRef ctx) {  
+  select_talk_duration(ctx);
 }
 
 void pbl_main(void *params) {
