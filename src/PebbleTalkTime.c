@@ -2,15 +2,14 @@
 #include "pebble_app.h"
 #include "pebble_fonts.h"
 
+#include "constants.h"
+
 #define MY_UUID { 0xD3, 0x8B, 0x2F, 0x08, 0x04, 0xAB, 0x4A, 0x68, 0xB2, 0xF7, 0x1E, 0xB4, 0xD2, 0x64, 0x4C, 0xFE }
 PBL_APP_INFO(MY_UUID,
              "Talk Timer", "Antoine Vernois // Crafting Labs",
              0, 1, /* App version */
              DEFAULT_MENU_ICON,
              APP_INFO_STANDARD_APP);
-
-#define DELAY 1000*60
-#define FIRST_NOTIFICATION 15
 
 Window _window;
 TextLayer _countDownLayer;
@@ -45,7 +44,6 @@ void start_countdown(AppContextRef ctx, int talkDuration) {
   app_timer_send_event(ctx, DELAY, 1);
 }
 
-
 void duration_selected(struct NumberWindow *number_window, void *context) {
   _talkDuration = number_window_get_value(number_window);
   start_countdown(context, _talkDuration);
@@ -71,9 +69,9 @@ void handle_init(AppContextRef ctx) {
     .incremented = NULL,
     .selected = (NumberWindowCallback) duration_selected}, ctx);
 
-  number_window_set_max(&_durationNumberWindow, 99);
-  number_window_set_min(&_durationNumberWindow, 0);
-  number_window_set_value(&_durationNumberWindow, 45);
+  number_window_set_max(&_durationNumberWindow, MAX_DURATION);
+  number_window_set_min(&_durationNumberWindow, MIN_DURATION);
+  number_window_set_value(&_durationNumberWindow, DEFAULT_DURATION);
 
   window_stack_push((Window *)&_durationNumberWindow, true);
 
