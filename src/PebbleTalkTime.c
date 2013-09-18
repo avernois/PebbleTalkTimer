@@ -12,9 +12,9 @@ PBL_APP_INFO(MY_UUID,
 #define DELAY 1000*60
 #define FIRST_NOTIFICATION 15
 
-Window window;
-TextLayer countDownLayer;
-NumberWindow durationNumberWindow;
+Window _window;
+TextLayer _countDownLayer;
+NumberWindow _durationNumberWindow;
 
 int _talkDuration;
 
@@ -23,9 +23,9 @@ typedef struct {
   char currentText[3];
 } CountDown;
 
-CountDown countDown;
+CountDown _countDown;
 
-const VibePattern custom_pattern = {
+const VibePattern _customPattern = {
   .durations = (uint32_t []) {500, 200, 500, 200, 500, 200, 500},
   .num_segments = 7
 };
@@ -41,7 +41,7 @@ void decrease_countdown(CountDown *countdown) {
 }
 
 void start_countdown(AppContextRef ctx, int talkDuration) {
-  set_coundown(&countDown, talkDuration);
+  set_coundown(&_countDown, talkDuration);
   app_timer_send_event(ctx, DELAY, 1);
 }
 
@@ -49,47 +49,47 @@ void start_countdown(AppContextRef ctx, int talkDuration) {
 void duration_selected(struct NumberWindow *number_window, void *context) {
   _talkDuration = number_window_get_value(number_window);
   start_countdown(context, _talkDuration);
-  window_stack_push((Window*)&window, true);
+  window_stack_push((Window*)&_window, true);
 }
 
 
 void handle_init(AppContextRef ctx) {
-  window_init(&window, "Window Name");
-  window_stack_push(&window, true /* Animated */);
-  window_set_fullscreen(&window, true);   
-  window_set_background_color(&window, GColorBlack);
+  window_init(&_window, "Window Name");
+  window_stack_push(&_window, true /* Animated */);
+  window_set_fullscreen(&_window, true);   
+  window_set_background_color(&_window, GColorBlack);
 
-  text_layer_init(&countDownLayer, GRect(0, 0, 144, 168));
-  text_layer_set_text_color(&countDownLayer, GColorWhite);
-  text_layer_set_background_color(&countDownLayer, GColorClear);
-  text_layer_set_text_alignment(&countDownLayer, GTextAlignmentCenter);
-  text_layer_set_font(&countDownLayer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
-  layer_add_child(&window.layer, &countDownLayer.layer);
+  text_layer_init(&_countDownLayer, GRect(0, 0, 144, 168));
+  text_layer_set_text_color(&_countDownLayer, GColorWhite);
+  text_layer_set_background_color(&_countDownLayer, GColorClear);
+  text_layer_set_text_alignment(&_countDownLayer, GTextAlignmentCenter);
+  text_layer_set_font(&_countDownLayer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
+  layer_add_child(&_window.layer, &_countDownLayer.layer);
 
-  number_window_init(&durationNumberWindow, "Duration", (NumberWindowCallbacks){
+  number_window_init(&_durationNumberWindow, "Duration", (NumberWindowCallbacks){
     .decremented = NULL,
     .incremented = NULL,
     .selected = (NumberWindowCallback) duration_selected}, ctx);
 
-  number_window_set_max(&durationNumberWindow, 99);
-  number_window_set_min(&durationNumberWindow, 0);
-  number_window_set_value(&durationNumberWindow, 45);
+  number_window_set_max(&_durationNumberWindow, 99);
+  number_window_set_min(&_durationNumberWindow, 0);
+  number_window_set_value(&_durationNumberWindow, 45);
 
-  window_stack_push((Window *)&durationNumberWindow, true);
+  window_stack_push((Window *)&_durationNumberWindow, true);
 
-  text_layer_set_text(&countDownLayer, countDown.currentText);
+  text_layer_set_text(&_countDownLayer, _countDown.currentText);
 }
 
 void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
-  if (countDown.current > 0) {
-    decrease_countdown(&countDown);
-    if (countDown.current == FIRST_NOTIFICATION) {
-      vibes_enqueue_custom_pattern(custom_pattern);
+  if (_countDown.current > 0) {
+    decrease_countdown(&_countDown);
+    if (_countDown.current == FIRST_NOTIFICATION) {
+      vibes_enqueue_custom_pattern(_customPattern);
     }
-    text_layer_set_text(&countDownLayer, countDown.currentText);
+    text_layer_set_text(&_countDownLayer, _countDown.currentText);
     app_timer_send_event(ctx, DELAY, 1);
   } else {
-    text_layer_set_text(&countDownLayer, "Time's up !");
+    text_layer_set_text(&_countDownLayer, "Time's up !");
   }
 }
 
