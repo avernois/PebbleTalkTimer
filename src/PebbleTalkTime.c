@@ -10,11 +10,13 @@ PBL_APP_INFO(MY_UUID,
              APP_INFO_STANDARD_APP);
 
 #define DELAY 1000*60
-#define COUNTDOWN_START_VALUE 45
 #define FIRST_NOTIFICATION 15
 
 Window window;
 TextLayer countDownLayer;
+NumberWindow durationNumberWindow;
+
+int _talkDuration;
 
 typedef struct {
   int current;
@@ -38,10 +40,18 @@ void decrease_countdown(CountDown *countdown) {
   set_coundown(countdown, countdown->current - 1);
 }
 
-void start_countdown(AppContextRef ctx) {
-  set_coundown(&countDown, COUNTDOWN_START_VALUE);
+void start_countdown(AppContextRef ctx, int talkDuration) {
+  set_coundown(&countDown, talkDuration);
   app_timer_send_event(ctx, DELAY, 1);
 }
+
+
+void duration_selected(struct NumberWindow *number_window, void *context) {
+  _talkDuration = number_window_get_value(number_window);
+  start_countdown(context, _talkDuration);
+  window_stack_push((Window*)&window, true);
+}
+
 
 void handle_init(AppContextRef ctx) {
   window_init(&window, "Window Name");
@@ -56,7 +66,17 @@ void handle_init(AppContextRef ctx) {
   text_layer_set_font(&countDownLayer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
   layer_add_child(&window.layer, &countDownLayer.layer);
 
-  start_countdown(ctx);
+  number_window_init(&durationNumberWindow, "Duration", (NumberWindowCallbacks){
+    .decremented = NULL,
+    .incremented = NULL,
+    .selected = (NumberWindowCallback) duration_selected}, ctx);
+
+  number_window_set_max(&durationNumberWindow, 99);
+  number_window_set_min(&durationNumberWindow, 0);
+  number_window_set_value(&durationNumberWindow, 45);
+
+  window_stack_push((Window *)&durationNumberWindow, true);
+
   text_layer_set_text(&countDownLayer, countDown.currentText);
 }
 
