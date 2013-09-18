@@ -14,8 +14,10 @@ PBL_APP_INFO(MY_UUID,
 Window _window;
 TextLayer _countDownLayer;
 NumberWindow _durationNumberWindow;
+NumberWindow _firstAlertNumberWindow;
 
 int _talkDuration;
+int _firstAlert;
 
 typedef struct {
   int current;
@@ -44,10 +46,30 @@ void start_countdown(AppContextRef ctx, int talkDuration) {
   app_timer_send_event(ctx, DELAY, 1);
 }
 
-void duration_selected(struct NumberWindow *number_window, void *context) {
-  _talkDuration = number_window_get_value(number_window);
+
+void first_alert_selected(struct NumberWindow *numberWindow, void *context){
+  _firstAlert = number_window_get_value(numberWindow);
+  
   start_countdown(context, _talkDuration);
   window_stack_push((Window*)&_window, true);
+}
+
+void select_first_alert(void *context) {
+  number_window_init(&_firstAlertNumberWindow, "First alert", (NumberWindowCallbacks){
+    .decremented = NULL,
+    .incremented = NULL,
+    .selected = (NumberWindowCallback) first_alert_selected}, context);
+
+  number_window_set_max(&_firstAlertNumberWindow, _talkDuration);
+  number_window_set_min(&_firstAlertNumberWindow, 0);
+  number_window_set_value(&_firstAlertNumberWindow, DEFAULT_FIRST_ALERT);
+
+  window_stack_push((Window*)&_firstAlertNumberWindow, true);
+}
+
+void duration_selected(struct NumberWindow *number_window, void *context) {
+  _talkDuration = number_window_get_value(number_window);
+  select_first_alert(context);
 }
 
 
@@ -81,7 +103,7 @@ void handle_init(AppContextRef ctx) {
 void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
   if (_countDown.current > 0) {
     decrease_countdown(&_countDown);
-    if (_countDown.current == FIRST_NOTIFICATION) {
+    if (_countDown.current == _firstAlert) {
       vibes_enqueue_custom_pattern(_customPattern);
     }
     text_layer_set_text(&_countDownLayer, _countDown.currentText);
