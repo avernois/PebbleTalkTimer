@@ -2,7 +2,6 @@
 #include "pebble_app.h"
 #include "pebble_fonts.h"
 
-
 #define MY_UUID { 0xD3, 0x8B, 0x2F, 0x08, 0x04, 0xAB, 0x4A, 0x68, 0xB2, 0xF7, 0x1E, 0xB4, 0xD2, 0x64, 0x4C, 0xFE }
 PBL_APP_INFO(MY_UUID,
              "Talk Timer", "Antoine Vernois // Crafting Labs",
@@ -10,8 +9,9 @@ PBL_APP_INFO(MY_UUID,
              DEFAULT_MENU_ICON,
              APP_INFO_STANDARD_APP);
 
-#define DELAY 1000 * 60
+#define DELAY 1000*60
 #define COUNTDOWN_START_VALUE 45
+#define FIRST_NOTIFICATION 15
 
 Window window;
 TextLayer countDownLayer;
@@ -22,6 +22,12 @@ typedef struct {
 } CountDown;
 
 CountDown countDown;
+
+const VibePattern custom_pattern = {
+  .durations = (uint32_t []) {500, 200, 500, 200, 500, 200, 500},
+  .num_segments = 7
+};
+
 
 void set_coundown(CountDown *countdown, int value) {
   countdown->current = value;
@@ -57,6 +63,9 @@ void handle_init(AppContextRef ctx) {
 void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
   if (countDown.current > 0) {
     decrease_countdown(&countDown);
+    if (countDown.current == FIRST_NOTIFICATION) {
+      vibes_enqueue_custom_pattern(custom_pattern);
+    }
     text_layer_set_text(&countDownLayer, countDown.currentText);
     app_timer_send_event(ctx, DELAY, 1);
   } else {
