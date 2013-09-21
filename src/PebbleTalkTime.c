@@ -27,8 +27,6 @@ CountDown _countDown = {.current = DEFAULT_DURATION,
                         },
                         .currentText = "  "};
 
-
-
 void start_countdown() {
   app_timer_send_event(_appContextRef, DELAY, 1);
 }
@@ -95,14 +93,14 @@ void select_talk_duration(CountDown *countDown) {
 }
 
 void manage_alert(CountDown *countDown) {
-  if(countdown_is_first_alert_time(countDown)) {
+  if(countdown_is_first_alert_time(countDown) 
+     || countdown_is_time_over(countDown)) {
     vibes_enqueue_custom_pattern(countdown_get_vibe_pattern(countDown));
   }
 }
 
 void update_countdown(CountDown *countDown) {
   countdown_decrease(countDown);
-  manage_alert(countDown);
   text_layer_set_text(&_countDownLayer, countdown_get_current_as_text(countDown));
 }
 
@@ -113,6 +111,7 @@ void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
   } else {
     text_layer_set_text(&_countDownLayer, "Time's up !");
   }
+  manage_alert(&_countDown);
 }
 
 void handle_init(AppContextRef ctx) {
