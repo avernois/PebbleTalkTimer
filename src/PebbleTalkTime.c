@@ -3,6 +3,8 @@
 #include "pebble_fonts.h"
 #include "constants.h"
 
+#include "countdown.h"
+
 #define MY_UUID { 0xD3, 0x8B, 0x2F, 0x08, 0x04, 0xAB, 0x4A, 0x68, 0xB2, 0xF7, 0x1E, 0xB4, 0xD2, 0x64, 0x4C, 0xFE }
 PBL_APP_INFO(MY_UUID,
              "Talk Timer", "Antoine Vernois // Crafting Labs",
@@ -15,17 +17,7 @@ TextLayer _countDownLayer;
 NumberWindow _durationNumberWindow;
 NumberWindow _firstAlertNumberWindow;
 
-int _firstAlert;
-
-typedef struct {
-  int current;
-  int firstAlert;
-  VibePattern vibePattern;
-  char currentText[3];
-} CountDown;
-
 AppContextRef _appContextRef;
-
 
 CountDown _countDown = {.current = DEFAULT_DURATION,
                         .firstAlert = DEFAULT_FIRST_ALERT,
@@ -35,34 +27,7 @@ CountDown _countDown = {.current = DEFAULT_DURATION,
                         },
                         .currentText = "  "};
 
-void countdown_set(CountDown *countdown, int value) {
-  countdown->current = value;
-  snprintf(countdown->currentText, 3, "%d", countdown->current);
-}
 
-void countdown_set_first_alert(CountDown *countdown, int firstAlert) {
-  countdown->firstAlert = firstAlert;
-}
-
-void countdown_decrease(CountDown *countDown) {
-  countdown_set(countDown, countDown->current - 1);
-}
-
-bool countdown_is_first_alert_time(CountDown *countDown) {
-  return (countDown->current == countDown->firstAlert);
-}
-
-bool countdown_is_time_over(CountDown *countDown) {
-  return countDown->current <= 0;
-}
-
-char* countdown_get_current_as_text(CountDown *countDown) {
-  return countDown->currentText;
-}
-
-VibePattern countdown_get_vibe_pattern(CountDown *countDown) {
-  return countDown->vibePattern;
-}
 
 void start_countdown() {
   app_timer_send_event(_appContextRef, DELAY, 1);
