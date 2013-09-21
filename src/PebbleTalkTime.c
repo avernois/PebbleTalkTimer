@@ -16,11 +16,13 @@ Window _window;
 TextLayer _countDownLayer;
 NumberWindow _durationNumberWindow;
 NumberWindow _firstAlertNumberWindow;
+NumberWindow _secondAlertNumberWindow;
 
 AppContextRef _appContextRef;
 
 CountDown _countDown = {.current = DEFAULT_DURATION,
                         .firstAlert = DEFAULT_FIRST_ALERT,
+                        .secondAlert = DEFAULT_SECOND_ALERT,
                         .vibePattern = {
                           .durations = (uint32_t []) {500, 200, 500, 200, 500, 200, 500},
                           .num_segments = 7
@@ -47,13 +49,35 @@ void init_countdown_window(CountDown *countDown) {
   layer_add_child(&_window.layer, &_countDownLayer.layer);
 }
 
-void handle_first_alert_selected(struct NumberWindow *numberWindow, void *context){
+
+void handle_second_alert_selected(struct NumberWindow *numberWindow, void *context){
   CountDown *countDown = (CountDown *) context;
-  countdown_set_first_alert(countDown, number_window_get_value(numberWindow));
+  countdown_set_second_alert(countDown, number_window_get_value(numberWindow));
   
   init_countdown_window(countDown);
   start_countdown();
   window_stack_push((Window*)&_window, true);
+}
+
+void select_second_alert(CountDown *countDown) {
+  number_window_init(&_secondAlertNumberWindow, "Second alert", 
+                     (NumberWindowCallbacks){
+                      .decremented = NULL,
+                      .incremented = NULL,
+                      .selected = (NumberWindowCallback) handle_second_alert_selected
+                      }, 
+                      countDown);
+  number_window_set_min(&_secondAlertNumberWindow, 0);
+  number_window_set_value(&_secondAlertNumberWindow, DEFAULT_SECOND_ALERT);
+
+  window_stack_push((Window*)&_secondAlertNumberWindow, true);
+}
+
+void handle_first_alert_selected(struct NumberWindow *numberWindow, void *context){
+  CountDown *countDown = (CountDown *) context;
+  countdown_set_first_alert(countDown, number_window_get_value(numberWindow));
+  
+  select_second_alert(countDown);
 }
 
 void select_first_alert(CountDown *countDown) {
@@ -93,7 +117,8 @@ void select_talk_duration(CountDown *countDown) {
 }
 
 void manage_alert(CountDown *countDown) {
-  if(countdown_is_first_alert_time(countDown) 
+  if(countdown_is_first_alert_time(countDown)
+     || countdown_is_second_alert_time(countDown) 
      || countdown_is_time_over(countDown)) {
     vibes_enqueue_custom_pattern(countdown_get_vibe_pattern(countDown));
   }
