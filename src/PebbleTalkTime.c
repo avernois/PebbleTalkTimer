@@ -105,8 +105,8 @@ void update_countdown(CountDown *countDown) {
 }
 
 void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
+  update_countdown(&_countDown);
   if (!countdown_is_time_over(&_countDown)) {
-    update_countdown(&_countDown);
     app_timer_send_event(ctx, DELAY, 1);
   } else {
     text_layer_set_text(&_countDownLayer, "Time's up !");
