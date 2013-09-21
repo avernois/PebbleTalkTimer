@@ -24,6 +24,8 @@ typedef struct {
   char currentText[3];
 } CountDown;
 
+AppContextRef _appContextRef;
+
 
 CountDown _countDown = {.current = DEFAULT_DURATION,
                         .firstAlert = DEFAULT_FIRST_ALERT,
@@ -33,20 +35,40 @@ CountDown _countDown = {.current = DEFAULT_DURATION,
                         },
                         .currentText = "  "};
 
-void set_coundown(CountDown *countdown, int value) {
+void countdown_set(CountDown *countdown, int value) {
   countdown->current = value;
   snprintf(countdown->currentText, 3, "%d", countdown->current);
 }
 
-void decrease_countdown(CountDown *countdown) {
-  set_coundown(countdown, countdown->current - 1);
+void countdown_set_first_alert(CountDown *countdown, int firstAlert) {
+  countdown->firstAlert = firstAlert;
 }
 
-void start_countdown(AppContextRef ctx) {
-  app_timer_send_event(ctx, DELAY, 1);
+void countdown_decrease(CountDown *countDown) {
+  countdown_set(countDown, countDown->current - 1);
 }
 
-void init_countdown_window() {
+bool countdown_is_first_alert_time(CountDown *countDown) {
+  return (countDown->current == countDown->firstAlert);
+}
+
+bool countdown_is_time_over(CountDown *countDown) {
+  return countDown->current <= 0;
+}
+
+char* countdown_get_current_as_text(CountDown *countDown) {
+  return countDown->currentText;
+}
+
+VibePattern countdown_get_vibe_pattern(CountDown *countDown) {
+  return countDown->vibePattern;
+}
+
+void start_countdown() {
+  app_timer_send_event(_appContextRef, DELAY, 1);
+}
+
+void init_countdown_window(CountDown *countDown) {
   window_init(&_window, "Window Name");
   window_stack_push(&_window, true /* Animated */);
   window_set_fullscreen(&_window, true);   
@@ -58,27 +80,27 @@ void init_countdown_window() {
   text_layer_set_text_alignment(&_countDownLayer, GTextAlignmentCenter);
   text_layer_set_font(&_countDownLayer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
 
-  text_layer_set_text(&_countDownLayer, _countDown.currentText);
+  text_layer_set_text(&_countDownLayer, countdown_get_current_as_text(countDown));
   layer_add_child(&_window.layer, &_countDownLayer.layer);
 }
 
 void handle_first_alert_selected(struct NumberWindow *numberWindow, void *context){
-  _countDown.firstAlert = number_window_get_value(numberWindow);
+  CountDown *countDown = (CountDown *) context;
+  countdown_set_first_alert(countDown, number_window_get_value(numberWindow));
   
-  init_countdown_window();
-  start_countdown(context);
+  init_countdown_window(countDown);
+  start_countdown();
   window_stack_push((Window*)&_window, true);
 }
 
-void select_first_alert(void *context) {
+void select_first_alert(CountDown *countDown) {
   number_window_init(&_firstAlertNumberWindow, "First alert", 
                      (NumberWindowCallbacks){
                       .decremented = NULL,
                       .incremented = NULL,
                       .selected = (NumberWindowCallback) handle_first_alert_selected
                       }, 
-                      context);
-
+                      countDown);
   number_window_set_min(&_firstAlertNumberWindow, 0);
   number_window_set_value(&_firstAlertNumberWindow, DEFAULT_FIRST_ALERT);
 
@@ -86,18 +108,19 @@ void select_first_alert(void *context) {
 }
 
 void handle_duration_selected(struct NumberWindow *number_window, void *context) {
-  set_coundown(&_countDown, number_window_get_value(number_window));
-  select_first_alert(context);
+  CountDown *countDown = (CountDown *) context;
+  countdown_set(countDown, number_window_get_value(number_window));
+  select_first_alert(countDown);
 }
 
-void select_talk_duration(AppContextRef *context) {
+void select_talk_duration(CountDown *countDown) {
   number_window_init(&_durationNumberWindow, "Duration",
                      (NumberWindowCallbacks){
                       .decremented = NULL,
                       .incremented = NULL,
                       .selected = (NumberWindowCallback) handle_duration_selected
                      },
-                     context);
+                     countDown);
 
   number_window_set_max(&_durationNumberWindow, MAX_DURATION);
   number_window_set_min(&_durationNumberWindow, MIN_DURATION);
@@ -107,19 +130,19 @@ void select_talk_duration(AppContextRef *context) {
 }
 
 void manage_alert(CountDown *countDown) {
-  if (countDown->current == countDown->firstAlert) {
-    vibes_enqueue_custom_pattern(countDown->vibePattern);
+  if(countdown_is_first_alert_time(countDown)) {
+    vibes_enqueue_custom_pattern(countdown_get_vibe_pattern(countDown));
   }
 }
 
 void update_countdown(CountDown *countDown) {
-  decrease_countdown(countDown);
+  countdown_decrease(countDown);
   manage_alert(countDown);
-  text_layer_set_text(&_countDownLayer, countDown->currentText);
+  text_layer_set_text(&_countDownLayer, countdown_get_current_as_text(countDown));
 }
 
 void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
-  if (_countDown.current > 0) {
+  if (!countdown_is_time_over(&_countDown)) {
     update_countdown(&_countDown);
     app_timer_send_event(ctx, DELAY, 1);
   } else {
@@ -127,8 +150,9 @@ void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
   }
 }
 
-void handle_init(AppContextRef ctx) {  
-  select_talk_duration(ctx);
+void handle_init(AppContextRef ctx) {
+  _appContextRef = ctx;
+  select_talk_duration(&_countDown);
 }
 
 void pbl_main(void *params) {
