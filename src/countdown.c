@@ -11,12 +11,20 @@ void countdown_set_first_alert(CountDown *countdown, int firstAlert) {
   countdown->firstAlert = firstAlert;
 }
 
+void countdown_set_second_alert(CountDown *countdown, int secondAlert) {
+  countdown->secondAlert = secondAlert;
+}
+
 void countdown_decrease(CountDown *countDown) {
   countdown_set(countDown, countDown->current - 1);
 }
 
 bool countdown_is_first_alert_time(CountDown *countDown) {
   return (countDown->current == countDown->firstAlert);
+}
+
+bool countdown_is_second_alert_time(CountDown *countDown) {
+  return (countDown->current == countDown->secondAlert);
 }
 
 bool countdown_is_time_over(CountDown *countDown) {
