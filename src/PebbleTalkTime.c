@@ -13,10 +13,14 @@ PBL_APP_INFO(MY_UUID,
              APP_INFO_STANDARD_APP);
 
 Window _window;
-TextLayer _countDownLayer;
 NumberWindow _durationNumberWindow;
 NumberWindow _firstAlertNumberWindow;
 NumberWindow _secondAlertNumberWindow;
+
+const int RESOURCE_IMAGE_IDS[10] = {RESOURCE_ID_IMAGE_NUM_0, 
+                                    RESOURCE_ID_IMAGE_NUM_1, RESOURCE_ID_IMAGE_NUM_2, RESOURCE_ID_IMAGE_NUM_3, 
+                                    RESOURCE_ID_IMAGE_NUM_4, RESOURCE_ID_IMAGE_NUM_5, RESOURCE_ID_IMAGE_NUM_6, 
+                                    RESOURCE_ID_IMAGE_NUM_7, RESOURCE_ID_IMAGE_NUM_8, RESOURCE_ID_IMAGE_NUM_9 };
 
 AppContextRef _appContextRef;
 
@@ -29,6 +33,45 @@ CountDown _countDown = {.current = DEFAULT_DURATION,
                         },
                         .currentText = "  "};
 
+typedef struct {
+  BmpContainer container;
+  int status;
+  int x_offset;
+} Digit;
+
+Digit _digits[2];
+
+void init_digit(Digit *digit, int x_offset) {
+  digit->status = -1;
+  digit->x_offset = x_offset;
+}
+
+void remove_digit(Digit *digit) {
+  if (digit->status != -1) {  
+    layer_remove_from_parent(&digit->container.layer.layer);
+    bmp_deinit_container(&digit->container);  
+    digit->status = -1;
+  }
+}
+
+void display_digit(Digit *digit, int value) {
+  bmp_init_container(RESOURCE_IMAGE_IDS[value], &digit->container);
+  digit->container.layer.layer.frame.origin.x = digit->x_offset;
+  layer_add_child(&_window.layer, &digit->container.layer.layer);
+  digit->status = value;
+}
+
+void display_value(int value) {
+  int unit_digit = value % 10;
+  int tenth_digit = value / 10;
+
+  remove_digit(&_digits[0]);
+  remove_digit(&_digits[1]);
+ 
+  display_digit(&_digits[0], tenth_digit);
+  display_digit(&_digits[1], unit_digit);
+}
+
 void start_countdown() {
   app_timer_send_event(_appContextRef, DELAY, 1);
 }
@@ -39,14 +82,12 @@ void init_countdown_window(CountDown *countDown) {
   window_set_fullscreen(&_window, true);
   window_set_background_color(&_window, GColorBlack);
 
-  text_layer_init(&_countDownLayer, GRect(0, 0, 144, 168));
-  text_layer_set_text_color(&_countDownLayer, GColorWhite);
-  text_layer_set_background_color(&_countDownLayer, GColorClear);
-  text_layer_set_text_alignment(&_countDownLayer, GTextAlignmentCenter);
-  text_layer_set_font(&_countDownLayer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
+  resource_init_current_app(&APP_RESOURCES);
 
-  text_layer_set_text(&_countDownLayer, countdown_get_current_as_text(countDown));
-  layer_add_child(&_window.layer, &_countDownLayer.layer);
+  init_digit(&_digits[0], 0);
+  init_digit(&_digits[1], 72);
+
+  display_value(countdown_get_current(countDown));
 }
 
 void select_time(CountDown *countDown, char* windowName, NumberWindow *window, NumberWindowCallback callback, int defaultValue) {
@@ -96,7 +137,9 @@ void manage_alert(CountDown *countDown) {
 
 void update_countdown(CountDown *countDown) {
   countdown_decrease(countDown);
-  text_layer_set_text(&_countDownLayer, countdown_get_current_as_text(countDown));
+  display_value(countdown_get_current(countDown));
+
+  //text_layer_set_text(&_countDownLayer, countdown_get_current_as_text(countDown));
 }
 
 void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
@@ -104,7 +147,7 @@ void handle_timer(AppContextRef ctx, AppTimerHandle handle, uint32_t cookie) {
   if (!countdown_is_time_over(&_countDown)) {
     app_timer_send_event(ctx, DELAY, 1);
   } else {
-    text_layer_set_text(&_countDownLayer, "Time's up !");
+    //text_layer_set_text(&_countDownLayer, "Time's up !");
   }
   manage_alert(&_countDown);
 }
