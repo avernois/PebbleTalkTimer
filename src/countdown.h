@@ -23,6 +23,7 @@ bool countdown_is_second_alert_time(CountDown *countDown);
 bool countdown_is_time_over(CountDown *countDown);
 
 char* countdown_get_current_as_text(CountDown *countDown);
+int countdown_get_current(CountDown *countDown);
 
 VibePattern countdown_get_vibe_pattern(CountDown *countDown);
 

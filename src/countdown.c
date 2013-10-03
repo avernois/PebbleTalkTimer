@@ -35,6 +35,10 @@ char* countdown_get_current_as_text(CountDown *countDown) {
   return countDown->currentText;
 }
 
+int countdown_get_current(CountDown *countDown) {
+  return countDown->current;
+}
+
 VibePattern countdown_get_vibe_pattern(CountDown *countDown) {
   return countDown->vibePattern;
 }
