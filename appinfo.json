@@ -1,15 +1,20 @@
 {
-  "uuid": "d38b2f08-04ab-4a68-b2f7-1eb4d2644cfe",
-  "shortName": "appname",
-  "longName": "appname",
-  "companyName": "nom",
-  "versionCode": 0,
-  "versionLabel": "0.1.0",
-  "watchapp": {
-    "watchface": false
-  },
-  "appKeys": {},
-  "resources": {
-    "media": []
-  }
+    "appKeys": {},
+    "capabilities": [
+        ""
+    ],
+    "companyName": "Crafting Labs",
+    "longName": "Talk Timer",
+    "projectType": "native",
+    "resources": {
+        "media": []
+    },
+    "sdkVersion": "2",
+    "shortName": "Talk Timer",
+    "uuid": "d38b2f08-04ab-4a68-b2f7-1eb4d2644cfe",
+    "versionCode": 1,
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": false
+    }
 }
