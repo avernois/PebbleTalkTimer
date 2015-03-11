@@ -1,4 +1,4 @@
-#include "pebble_os.h"
+#include <pebble.h>
 
 #include "countdown.h"
 
